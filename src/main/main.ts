@@ -142,3 +142,15 @@ app
     });
   })
   .catch(console.log);
+
+  ipcMain.on('note',() => {
+    const child = new BrowserWindow({
+      width: 1024,
+      height: 728,
+        webPreferences: {
+        preload: app.isPackaged
+          ? path.join(__dirname, 'preload.js')
+          : path.join(__dirname, '../../.erb/dll/preload.js'),
+      },
+    });
+  })
