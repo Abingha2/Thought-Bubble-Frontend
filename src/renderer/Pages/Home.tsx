@@ -10,7 +10,7 @@ export default function Home () {
     window.electron.ipcRenderer.sendMessage('login',[email,password])
     }
     return (
-<div>
+    <div> 
       <h1>Thought Bubble</h1>
       <div className="Hello">
         <div>
@@ -27,7 +27,7 @@ export default function Home () {
             <span role="img" aria-label="folded hands">
               🙏
             </span>
-            Donate
+            Login
           </button>
       </div>
     </div>

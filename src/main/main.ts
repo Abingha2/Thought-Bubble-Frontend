@@ -46,7 +46,7 @@ const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 if (isDebug) {
-  require('electron-debug')();
+  //require('electron-debug')();
 }
 
 const installExtensions = async () => {
@@ -212,13 +212,30 @@ async function showThought(id:number){
   const child = new BrowserWindow({
     width: 1024,
     height: 728,
+    transparent: false,
+    frame: false,
       webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
-
+  try{
+    const res = await fetch(`${process.env.SERVER_URL}/thought/viewed`,{
+    method: "POST",
+    headers: {
+      "Content-Type" : "application/json",
+      "x-access-token": userData.token
+    },
+    body: JSON.stringify({id:id})
+  })
+  const {result, data} = await res.json()
+  if(res.status === 200 && result === "ok"){
+    console.log("View status update successful.")
+  }
+  }catch(err){
+  console.log(err)
+  }
   child.loadURL(resolveHtmlPath(`/thought/${id}`))
 }
 
@@ -228,4 +245,29 @@ ipcMain.on('thought',async (window, id) => {
   const found = thoughts.find((thought) => thought.id === parseInt(id))
   console.log(found)
   window.reply("thought",found)
+})
+
+ipcMain.on('update',async(event,details) => {
+  const {id, title, body} = details
+try{
+const res = await fetch(`${process.env.SERVER_URL}/thought/edit`,{
+method: "POST",
+body: JSON.stringify({id:id, title:title, body:body}),
+headers: {
+  "Content-Type" : "application/json",
+  "x-access-token": userData.token
+}
+})
+const results = (await res.json())
+if(results.result === "ok"){
+  const index = thoughts.findIndex((thought) => thought.id === parseInt(id))
+  console.log(thoughts[index])
+  thoughts[index].title = title
+  thoughts[index].body = body
+  event.reply('update-done',true)
+}
+console.log(res.status, results)
+}catch(err){
+console.log(err)
+}
 })

@@ -6,12 +6,7 @@ body {
   position: relative;
   color: white;
   height: 100vh;
-  background: linear-gradient(
-    200.96deg,
-    #fedc2a -29.09%,
-    #dd5789 51.77%,
-    #7a2c9e 129.35%
-  );
+  background-color: #000000;
   font-family: sans-serif;
   overflow-y: hidden;
   display: flex;
@@ -54,9 +49,25 @@ a:hover {
   text-decoration: none;
 }
 
-.Hello {
+ThoughtContainer{
+  background-color: #ff0000;
+}
+
+ThoughtContainer > div {
+  -webkit-app-region: drag;
+  user-select: none;
+  width:100vw;
+  height: 40px;
+  background-color: #fff;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.thought {
   display: flex;
   justify-content: center;
   align-items: center;
   margin: 20px 0;
+  background-color: #00000000;
 }

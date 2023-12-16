@@ -32,18 +32,17 @@ const [thoughtTitle, setThoughtTitle]= useState("")
     
       return (
   <div>
-        <h1>Thought Bubble</h1>
-        <div className="Hello">
             <ThoughtContainer>
+                <div>Welp</div>
             <Title>{thoughtTitle}</Title>
             <h3>{thoughtDate}</h3>
             <ThoughtBody>{thoughtBody}</ThoughtBody>
+            <a href={`/update/${ID}`}>edit</a>
             </ThoughtContainer>
           <div>
         
         </div>
             
-        </div>
       </div>
       )
   }
