@@ -8,12 +8,18 @@
  * When running `npm run build` or `npm run build:main`, this file is compiled to
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
+require("dotenv").config()
+
 import path from 'path';
 import { app, BrowserWindow, shell, ipcMain, Notification } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+
+const userData={token:""}
+
+const thoughts: any[]=[]
 
 class AppUpdater {
   constructor() {
@@ -81,7 +87,7 @@ const createWindow = async () => {
     },
   });
 
-  mainWindow.loadURL(resolveHtmlPath('index.html'));
+  mainWindow.loadURL(resolveHtmlPath('/'));
 
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
@@ -135,6 +141,7 @@ app
   .whenReady()
   .then(() => {
     createWindow();
+    startChecker()
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
@@ -143,14 +150,82 @@ app
   })
   .catch(console.log);
 
-  ipcMain.on('note',() => {
-    const child = new BrowserWindow({
-      width: 1024,
-      height: 728,
-        webPreferences: {
-        preload: app.isPackaged
-          ? path.join(__dirname, 'preload.js')
-          : path.join(__dirname, '../../.erb/dll/preload.js'),
-      },
-    });
+  ipcMain.on('note',async () => {
+    console.log("Note Clicked")
+    await getThoughts()
   })
+  ipcMain.on('login',async(event,details) => {
+    const email = details[0]
+    const password = details[1]
+  try{
+  const res = await fetch(`${process.env.SERVER_URL}/login`,{
+  method: "POST",
+  body: JSON.stringify({email, password}),
+  headers: {
+    "Content-Type" : "application/json"
+  }
+})
+const results = (await res.json())
+userData.token = results.data;
+console.log(res.status, userData.token)
+}catch(err){
+console.log(err)
+}
+  })
+
+let checkTimer
+function startChecker(){
+  checkTimer=setInterval(async()=>{
+    //TODO:fetch call to backend to get thoughts
+  console.log("checking for thoughts")
+  if (userData.token !== "") await getThoughts()
+  },5*60*1000)
+}
+
+async function getThoughts() {
+  try{
+    const res = await fetch(`${process.env.SERVER_URL}/thought`,{
+    method: "POST",
+    headers: {
+      "Content-Type" : "application/json",
+      "x-access-token": userData.token
+    }
+  })
+  const newThoughts: Array<any> = (await res.json()).data
+  thoughts.push(...(newThoughts.filter((thought) => {
+    const exists = thoughts.find((search) => search.id === thought.id)
+    console.log("Does the thought exist? It will appear here ---> ", exists)
+    return exists ? false : thought;
+  })))
+  console.log(res.status, thoughts)
+  for(const thought of thoughts){
+    if(!thought.viewed){
+      await showThought(thought.id);
+    }
+  }
+  }catch(err){
+  console.log(err)
+  }
+}
+
+async function showThought(id:number){
+  const child = new BrowserWindow({
+    width: 1024,
+    height: 728,
+      webPreferences: {
+      preload: app.isPackaged
+        ? path.join(__dirname, 'preload.js')
+        : path.join(__dirname, '../../.erb/dll/preload.js'),
+    },
+  });
+
+  child.loadURL(resolveHtmlPath(`/thought/${id}`))
+}
+
+
+ipcMain.on('thought',async (window, id) => {
+  console.log("Loading thought", id, typeof id)
+  const found = thoughts.find((thought) => thought.id === parseInt(id))
+  console.log(found)
+  window.reply("thought",found)
+})
