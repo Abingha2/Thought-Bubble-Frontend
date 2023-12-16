@@ -38,18 +38,16 @@ export default function Update(){
 
  return (
     <div>
-          <div className="Hello">
-              <ThoughtContainer>
-                <div></div>
-              <input id="title" defaultValue={thoughtTitle} />
-              <input id="body" type="textarea" defaultValue={thoughtBody}/>
-              <button onClick={doUpdate}>Update</button>
-              </ThoughtContainer>
-            <div>
-          
-          </div>
-              
-          </div>
+        <ThoughtContainer className="thought">
+        <div className="titlebar">Edit Thought</div>
+            <div className="nodrag">
+            <div id="content">
+                <input id="title" className="editable" defaultValue={thoughtTitle} />
+                <input id="body" className="editable" type="textarea" defaultValue={thoughtBody}/>
+                <button className="editable" onClick={doUpdate}>Update</button>
+            </div>
         </div>
+        </ThoughtContainer>
+    </div>
         )
 }

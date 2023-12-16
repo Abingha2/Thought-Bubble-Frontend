@@ -17,9 +17,9 @@ import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
-const userData={token:""}
+const userData = { token: "" }
 
-const thoughts: any[]=[]
+const thoughts: any[] = []
 
 class AppUpdater {
   constructor() {
@@ -100,9 +100,9 @@ const createWindow = async () => {
       const NOTIFICATION_BODY = 'Welcome to Thought Bubble!'
 
       new Notification({
-      title: NOTIFICATION_TITLE,
-      body: NOTIFICATION_BODY
-}).show()
+        title: NOTIFICATION_TITLE,
+        body: NOTIFICATION_BODY
+      }).show()
       mainWindow.show();
     }
   });
@@ -150,124 +150,124 @@ app
   })
   .catch(console.log);
 
-  ipcMain.on('note',async () => {
-    console.log("Note Clicked")
-    await getThoughts()
-  })
-  ipcMain.on('login',async(event,details) => {
-    const email = details[0]
-    const password = details[1]
-  try{
-  const res = await fetch(`${process.env.SERVER_URL}/login`,{
-  method: "POST",
-  body: JSON.stringify({email, password}),
-  headers: {
-    "Content-Type" : "application/json"
+ipcMain.on('note', async () => {
+  console.log("Note Clicked")
+  await getThoughts()
+})
+ipcMain.on('login', async (event, details) => {
+  const email = details[0]
+  const password = details[1]
+  try {
+    const res = await fetch(`${process.env.SERVER_URL}/login`, {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    })
+    const results = (await res.json())
+    userData.token = results.data;
+    console.log(res.status, userData.token)
+  } catch (err) {
+    console.log(err)
   }
 })
-const results = (await res.json())
-userData.token = results.data;
-console.log(res.status, userData.token)
-}catch(err){
-console.log(err)
-}
-  })
 
 let checkTimer
-function startChecker(){
-  checkTimer=setInterval(async()=>{
+function startChecker() {
+  checkTimer = setInterval(async () => {
     //TODO:fetch call to backend to get thoughts
-  console.log("checking for thoughts")
-  if (userData.token !== "") await getThoughts()
-  },5*60*1000)
+    console.log("checking for thoughts")
+    if (userData.token !== "") await getThoughts()
+  }, 5 * 60 * 1000)
 }
 
 async function getThoughts() {
-  try{
-    const res = await fetch(`${process.env.SERVER_URL}/thought`,{
-    method: "POST",
-    headers: {
-      "Content-Type" : "application/json",
-      "x-access-token": userData.token
+  try {
+    const res = await fetch(`${process.env.SERVER_URL}/thought`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": userData.token
+      }
+    })
+    const newThoughts: Array<any> = (await res.json()).data
+    thoughts.push(...(newThoughts.filter((thought) => {
+      const exists = thoughts.find((search) => search.id === thought.id)
+      console.log("Does the thought exist? It will appear here ---> ", exists)
+      return exists ? false : thought;
+    })))
+    console.log(res.status, thoughts)
+    for (const thought of thoughts) {
+      if (!thought.viewed) {
+        await showThought(thought.id);
+      }
     }
-  })
-  const newThoughts: Array<any> = (await res.json()).data
-  thoughts.push(...(newThoughts.filter((thought) => {
-    const exists = thoughts.find((search) => search.id === thought.id)
-    console.log("Does the thought exist? It will appear here ---> ", exists)
-    return exists ? false : thought;
-  })))
-  console.log(res.status, thoughts)
-  for(const thought of thoughts){
-    if(!thought.viewed){
-      await showThought(thought.id);
-    }
-  }
-  }catch(err){
-  console.log(err)
+  } catch (err) {
+    console.log(err)
   }
 }
 
-async function showThought(id:number){
+async function showThought(id: number) {
   const child = new BrowserWindow({
-    width: 1024,
+    width: 400,
     height: 728,
-    transparent: false,
+    transparent: true,
     frame: false,
-      webPreferences: {
+    webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
-  try{
-    const res = await fetch(`${process.env.SERVER_URL}/thought/viewed`,{
-    method: "POST",
-    headers: {
-      "Content-Type" : "application/json",
-      "x-access-token": userData.token
-    },
-    body: JSON.stringify({id:id})
-  })
-  const {result, data} = await res.json()
-  if(res.status === 200 && result === "ok"){
-    console.log("View status update successful.")
-  }
-  }catch(err){
-  console.log(err)
+  try {
+    const res = await fetch(`${process.env.SERVER_URL}/thought/viewed`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": userData.token
+      },
+      body: JSON.stringify({ id: id })
+    })
+    const { result, data } = await res.json()
+    if (res.status === 200 && result === "ok") {
+      console.log("View status update successful.")
+    }
+  } catch (err) {
+    console.log(err)
   }
   child.loadURL(resolveHtmlPath(`/thought/${id}`))
 }
 
 
-ipcMain.on('thought',async (window, id) => {
+ipcMain.on('thought', async (window, id) => {
   console.log("Loading thought", id, typeof id)
   const found = thoughts.find((thought) => thought.id === parseInt(id))
   console.log(found)
-  window.reply("thought",found)
+  window.reply("thought", found)
 })
 
-ipcMain.on('update',async(event,details) => {
-  const {id, title, body} = details
-try{
-const res = await fetch(`${process.env.SERVER_URL}/thought/edit`,{
-method: "POST",
-body: JSON.stringify({id:id, title:title, body:body}),
-headers: {
-  "Content-Type" : "application/json",
-  "x-access-token": userData.token
-}
-})
-const results = (await res.json())
-if(results.result === "ok"){
-  const index = thoughts.findIndex((thought) => thought.id === parseInt(id))
-  console.log(thoughts[index])
-  thoughts[index].title = title
-  thoughts[index].body = body
-  event.reply('update-done',true)
-}
-console.log(res.status, results)
-}catch(err){
-console.log(err)
-}
+ipcMain.on('update', async (event, details) => {
+  const { id, title, body } = details
+  try {
+    const res = await fetch(`${process.env.SERVER_URL}/thought/edit`, {
+      method: "POST",
+      body: JSON.stringify({ id: id, title: title, body: body }),
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": userData.token
+      }
+    })
+    const results = (await res.json())
+    if (results.result === "ok") {
+      const index = thoughts.findIndex((thought) => thought.id === parseInt(id))
+      console.log(thoughts[index])
+      thoughts[index].title = title
+      thoughts[index].body = body
+      event.reply('update-done', true)
+    }
+    console.log(res.status, results)
+  } catch (err) {
+    console.log(err)
+  }
 })
